@@ -37,11 +37,12 @@ import ephem
 from astropy.time import Time
 
 
-def cal_ready(caldir='./'):
+def cube_ready(caldir='./', cur_date_str=None):
     """Check for all required calibration files in calibration directory.
 
     Args:
         caldir (str): directory to check
+        cur_date_str (str): current date in YYYYMMDD format
 
     Returns:
         bool: True if calibration files are present, False if any are missing.
@@ -50,15 +51,50 @@ def cal_ready(caldir='./'):
 
     ret = False
 
+    # Files to look for
+    if cur_date_str is None:
+        tmf = 'TraceMatch_WithMasks.pkl'
+        hgf = 'HexaGrid.pkl'
+        wsf = 'WaveSolution.pkl'
+        fff = 'Flat.fits'
+    else:
+        tmf = cur_date_str + '_TraceMatch_WithMasks.pkl'
+        hgf = cur_date_str + '_HexaGrid.pkl'
+        wsf = cur_date_str + '_WaveSolution.pkl'
+        fff = cur_date_str + '_Flat.fits'
+
     # Do we have all the calibration files?
+    ft = os.path.exists(os.path.join(caldir, tmf))
+    fg = os.path.exists(os.path.join(caldir, hgf))
+    fw = os.path.exists(os.path.join(caldir, wsf))
+    ff = os.path.exists(os.path.join(caldir, fff))
+    print("Cals ready?: trace: %d, grid: %d, wave: %d, flat: %d" %
+          (ft, fg, fw, ff))
+    if ft and fg and fw and ff:
+        ret = True
+
+    return ret
+
+
+def bias_ready(caldir='./'):
+    """Check for all required bias calibration files in calibration directory.
+
+    Args:
+        caldir (str): directory to check
+
+    Returns:
+        bool: True if bias files are present, False if they are not
+
+    """
+
+    ret = False
+
+    # Do we have all the calibration files?
+    # Check biases first
     fb = os.path.exists(os.path.join(caldir, 'bias0.1.fits'))
     f2 = os.path.exists(os.path.join(caldir, 'bias2.0.fits'))
-    fc = os.path.exists(os.path.join(caldir, 'cube.npy'))
-    ff = os.path.exists(os.path.join(caldir, 'fine.npy'))
-    fd = os.path.exists(os.path.join(caldir, 'flat-dome-700to900.npy'))
-    print("Cals ready?: bias0.1: %d, bias2.0: %d, cube: %d, "
-          "fine: %d, flat: %d" % (fb, f2, fc, ff, fd))
-    if fb and f2 and fc and ff and fd:
+    print("Biases ready?: bias0.1: %d, bias2.0: %d" % (fb, f2))
+    if fb and f2:
         ret = True
 
     return ret
@@ -398,7 +434,7 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False):
     # END: cpsci
 
 
-def find_recent(redd, fname, destdir):
+def find_recent(redd, fname, destdir, dstr):
     """Find the most recent version of fname and copy it to destdir.
 
     Look through sorted list of redux directories to find most recent
@@ -408,6 +444,50 @@ def find_recent(redd, fname, destdir):
         redd (str): reduced directory (something like /scr2/sedm/redux)
         fname (str): what file to look for
         destdir (str): where the file should go
+        dstr (str): YYYYMMDD date string of current directory
+
+    Returns:
+        bool: True if file found and copied, False otherwise.
+
+    """
+
+    # Default return value
+    ret = False
+    # Make sure the file doesn't already exist in destdir
+    local_file = glob.glob(os.path.join(destdir, dstr + fname))
+    if len(local_file) == 1:
+        print("%s already exists in %s" % (fname, destdir))
+        ret = True
+    # Search in redd for file
+    else:
+        # Get all but the most recent reduced data directories
+        fspec = os.path.join(redd, '20??????')
+        redlist = sorted([d for d in glob.glob(fspec)
+                          if os.path.isdir(d)])[0:-1]
+        # Go back in reduced dir list until we find our file
+        for d in reversed(redlist):
+            src = glob.glob(os.path.join(d, '20??????' + fname))
+            if len(src) == 1:
+                os.symlink(src[0], os.path.join(destdir, dstr + fname))
+                ret = True
+                print("Found %s, linking to %s" %
+                      (src[0], os.path.join(destdir, dstr + fname)))
+                break
+
+    return ret
+
+
+def find_recent_bias(redd, fname, destdir):
+    """Find the most recent version of fname and copy it to destdir.
+
+    Look through sorted list of redux directories to find most recent
+    version of the input file.  Copy it to the destination directory.
+
+    Args:
+        redd (str): reduced directory (something like /scr2/sedm/redux)
+        fname (str): what file to look for
+        destdir (str): where the file should go
+        dstr (str): YYYYMMDD date string of current directory
 
     Returns:
         bool: True if file found and copied, False otherwise.
@@ -431,10 +511,10 @@ def find_recent(redd, fname, destdir):
         for d in reversed(redlist):
             src = glob.glob(os.path.join(d, fname))
             if len(src) == 1:
-                shutil.copy(src[0], destdir)
+                os.symlink(src[0], os.path.join(destdir, fname))
                 ret = True
-                print("Found %s in directory %s, copying to %s" %
-                      (fname, d, destdir))
+                print("Found %s in directory %s, linking to %s" %
+                      (fname, d, os.path.join(destdir, fname)))
                 break
 
     return ret
@@ -650,6 +730,8 @@ def ObsLoop(rawlist=None, redd=None):
     oldcals = False
     # Output directory is based on source dir
     outdir = os.path.join(redd, srcdir.split('/')[-1])
+    # Current date string
+    cur_date_str = outdir.split('/')[-1]
     # Do we have a new directory?  This tells us we are observing tonight
     if not os.path.exists(outdir):
         # Make it
@@ -659,7 +741,7 @@ def ObsLoop(rawlist=None, redd=None):
     # report
     print("Raw files from  : %s\nReduced files to: %s" % (srcdir, outdir))
     # Check if processed cal files are ready
-    if not cal_ready(outdir):
+    if not cube_ready(outdir, cur_date_str):
         # Wait for cal files until sunset
         sunset = p60.next_setting(sun)
         # Copy raw cal files from previous date directory
@@ -718,19 +800,22 @@ def ObsLoop(rawlist=None, redd=None):
             startTime = time.time()
             if proc_bias_crrs(20):
                 procbTime = int(time.time() - startTime)
+                # Make cal images
+                retcode = os.system("make calimgs")
                 # Process cube
                 startTime = time.time()
-                retcode = os.system("make cube.npy")
+                retcode = os.system("python do_cube")
                 proccTime = int(time.time() - startTime)
-                if os.path.exists(os.path.join(outdir, 'cube.npy')):
+                if os.path.exists(
+                   os.path.join(outdir, cur_date_str + '_WaveSolution.pkl')):
                     # Process flat
                     startTime = time.time()
-                    retcode = os.system("make flat-dome-700to900.npy")
+                    retcode = os.system("python do_flat")
                     if not (os.path.exists(
-                            os.path.join(outdir, 'flat-dome-700to900.npy'))):
-                        print("Making of flat-dome-700to900.npy failed!")
+                            os.path.join(outdir, cur_date_str + '_Flat.fits'))):
+                        print("Making of %s_Flat.fits failed!" % cur_date_str)
                 else:
-                    print("Making of fine.npy and cube.npy failed!")
+                    print("Making of %s cube files failed!" % cur_date_str)
                 procfTime = int(time.time() - startTime)
                 # Report times
                 print("Calibration processing took "
@@ -738,19 +823,25 @@ def ObsLoop(rawlist=None, redd=None):
                       (procbTime, proccTime, procfTime))
 
         # Check status
-        if not cal_ready(outdir):
+        if not cube_ready(outdir, cur_date_str):
             print("These calibrations failed!")
             print("Let's get our calibrations from a previous night")
-            ncf = find_recent(redd, 'fine.npy', outdir)
-            ncc = find_recent(redd, 'cube.npy', outdir)
-            ncd = find_recent(redd, 'flat-dome-700to900.npy', outdir)
-            ncb = find_recent(redd, 'bias0.1.fits', outdir)
-            nc2 = find_recent(redd, 'bias2.0.fits', outdir)
+            nct = find_recent(redd, '_TraceMatch_WithMasks.pkl', outdir,
+                              cur_date_str)
+            ncg = find_recent(redd, '_HexaGrid.pkl', outdir, cur_date_str)
+            ncw = find_recent(redd, '_WaveSolution.pkl', outdir, cur_date_str)
+            ncf = find_recent(redd, '_Flat.fits', outdir, cur_date_str)
+            if not bias_ready(outdir):
+                ncb = find_recent_bias(redd, 'bias0.1.fits', outdir)
+                nc2 = find_recent_bias(redd, 'bias2.0.fits', outdir)
+            else:
+                ncb = True
+                nc2 = True
             # Check for failure
-            if not ncf or not ncc or not ncd or not ncb or not nc2:
-                msg = "Calibration stage failed: fine = %s, cube = %s, " \
-                      "flat = %s, bias0.1 = %s, bias2.0 = %s, " \
-                      "stopping" % (ncf, ncc, ncd, ncb, nc2)
+            if not nct or not ncg or not ncw or not ncf or not ncb or not nc2:
+                msg = "Calibration stage failed: trace = %s, grid = %s, " \
+                      "wave = %s, flat = %s, bias0.1 = %s, bias2.0 = %s, " \
+                      "stopping" % (nct, ncg, ncw, ncf, ncb, nc2)
                 sys.exit(msg)
             # If we get here, we are done
             oldcals = True

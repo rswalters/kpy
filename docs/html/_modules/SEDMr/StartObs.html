@@ -53,7 +53,7 @@
 <span class="sd">    * :func:`proc_bkg_flex`   processes bkg sub and flex calculation</span>
 <span class="sd">    * :func:`docp`            low level copy routine</span>
 <span class="sd">    * :func:`cal_proc_ready`  check if all required raw cal images are present</span>
-<span class="sd">    * :func:`cal_ready`       check if all required cal files are present</span>
+<span class="sd">    * :func:`cube_ready`       check if all required cal files are present</span>
 
 <span class="sd">Note:</span>
 <span class="sd">    This is used as a python script as follows::</span>
@@ -78,7 +78,7 @@
 <span class="kn">from</span> <span class="nn">astropy.time</span> <span class="kn">import</span> <span class="n">Time</span>
 
 
-<div class="viewcode-block" id="cal_ready"><a class="viewcode-back" href="../../SEDMr.html#SEDMr.StartObs.cal_ready">[docs]</a><span class="k">def</span> <span class="nf">cal_ready</span><span class="p">(</span><span class="n">caldir</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="cube_ready"><a class="viewcode-back" href="../../SEDMr.html#SEDMr.StartObs.cube_ready">[docs]</a><span class="k">def</span> <span class="nf">cube_ready</span><span class="p">(</span><span class="n">caldir</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Check for all required calibration files in calibration directory.</span>
 
 <span class="sd">    Args:</span>
@@ -727,7 +727,7 @@
     <span class="c1"># report</span>
     <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Raw files from  : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">Reduced files to: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">srcdir</span><span class="p">,</span> <span class="n">outdir</span><span class="p">))</span>
     <span class="c1"># Check if processed cal files are ready</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">cal_ready</span><span class="p">(</span><span class="n">outdir</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cube_ready</span><span class="p">(</span><span class="n">outdir</span><span class="p">):</span>
         <span class="c1"># Wait for cal files until sunset</span>
         <span class="n">sunset</span> <span class="o">=</span> <span class="n">p60</span><span class="o">.</span><span class="n">next_setting</span><span class="p">(</span><span class="n">sun</span><span class="p">)</span>
         <span class="c1"># Copy raw cal files from previous date directory</span>
@@ -792,7 +792,7 @@
                       <span class="p">(</span><span class="n">procbTime</span><span class="p">,</span> <span class="n">proccTime</span><span class="p">,</span> <span class="n">procfTime</span><span class="p">))</span>
 
         <span class="c1"># Check status</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">cal_ready</span><span class="p">(</span><span class="n">outdir</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cube_ready</span><span class="p">(</span><span class="n">outdir</span><span class="p">):</span>
             <span class="k">print</span><span class="p">(</span><span class="s2">&quot;These calibrations failed!&quot;</span><span class="p">)</span>
             <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Let&#39;s get our calibrations from a previous night&quot;</span><span class="p">)</span>
             <span class="n">ncf</span> <span class="o">=</span> <span class="n">find_recent</span><span class="p">(</span><span class="n">redd</span><span class="p">,</span> <span class="s1">&#39;fine.npy&#39;</span><span class="p">,</span> <span class="n">outdir</span><span class="p">)</span>

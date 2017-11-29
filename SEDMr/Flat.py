@@ -67,6 +67,7 @@ def measure_flat(extraction, fmeta, lamstart=700, lamend=900):
 
     return corrections
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=\
         """Create dome flat

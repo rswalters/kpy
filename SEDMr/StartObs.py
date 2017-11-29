@@ -804,13 +804,15 @@ def ObsLoop(rawlist=None, redd=None):
                 retcode = os.system("make calimgs")
                 # Process cube
                 startTime = time.time()
-                retcode = os.system("python do_cube")
+                retcode = os.system("ccd_to_cube.py %s --tracematch --hexagrid --wavesol" %
+                                    cur_date_str)
                 proccTime = int(time.time() - startTime)
                 if os.path.exists(
                    os.path.join(outdir, cur_date_str + '_WaveSolution.pkl')):
                     # Process flat
                     startTime = time.time()
-                    retcode = os.system("python do_flat")
+                    retcode = os.system("ccd_to_cube.py %s --build dome --flat"
+                                        % cur_date_str)
                     if not (os.path.exists(
                             os.path.join(outdir, cur_date_str + '_Flat.fits'))):
                         print("Making of %s_Flat.fits failed!" % cur_date_str)

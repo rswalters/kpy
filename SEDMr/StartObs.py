@@ -554,66 +554,69 @@ def cpprecal(dirlist, destdir='./', fsize=8400960):
     # convert to JD
     ctime = Time(cdate[0:4]+'-'+cdate[4:6]+'-'+cdate[6:])
     cjd = ctime.jd
-    #
-    # previous source dir
-    pdate = dirlist[-2].split('/')[-1]
-    # convert to JD
-    ptime = Time(pdate[0:4]+'-'+pdate[4:6]+'-'+pdate[6:])
-    pjd = ptime.jd
     # Record how many images copied
     ncp = 0
-    # If there is a previous night, get those files
-    if (int(cjd) - int(pjd)) <= 1:
-        # Set the previous night as the source directory
-        srcdir = dirlist[-2]
-        # Get list of previous night's raw cal files
-        # (within four hours of day changeover)
-        fspec = os.path.join(srcdir, "ifu%s_2*.fits" % pdate)
-        flist = sorted(glob.glob(fspec))
-        # Loop over file list
-        for src in flist:
-            if os.stat(src).st_size >= fsize:
-                # Read FITS header
-                f = pf.open(src)
-                hdr = f[0].header
-                f.close()
-                # Get OBJECT keyword
-                obj = hdr['OBJECT']
-                # Filter Calibs and avoid test images
-                if 'Calib' in obj and 'of' in obj and 'test' not in obj:
-                    # Copy cal images
-                    imf = src.split('/')[-1]
-                    destfil = os.path.join(destdir, imf)
-                    exptime = hdr['EXPTIME']
-                    # Check for dome exposures
-                    if 'dome' in obj:
-                        if exptime > 100. and ('dome' in obj and
-                                               'Xe' not in obj and
-                                               'Hg' not in obj and 
-                                               'Cd' not in obj):
-                            # Copy dome images
-                            if not os.path.exists(destfil):
-                                nc, ns = docp(src, destfil, onsky=False,
-                                              verbose=True)
-                                ncp += nc
-                    # Check for arcs
-                    elif 'Xe' in obj or 'Cd' in obj or 'Hg' in obj:
-                        if exptime > 25.:
-                            # Copy arc images
-                            if not os.path.exists(destfil):
-                                nc, ns = docp(src, destfil, onsky=False,
-                                              verbose=True)
-                                ncp += nc
-                    # Check for biases
-                    elif 'bias' in obj:
-                        if exptime <= 0.:
-                            # Copy bias images
-                            if not os.path.exists(destfil):
-                                nc, ns = docp(src, destfil, onsky=False,
-                                              verbose=True)
-                                ncp += nc
-            else:
-                print("Truncated file: %s" % src)
+    #
+    # previous source dir
+    if len(dirlist) > 1:
+        pdate = dirlist[-2].split('/')[-1]
+        # convert to JD
+        ptime = Time(pdate[0:4]+'-'+pdate[4:6]+'-'+pdate[6:])
+        pjd = ptime.jd
+        # If there is a previous night, get those files
+        if (int(cjd) - int(pjd)) <= 1:
+            # Set the previous night as the source directory
+            srcdir = dirlist[-2]
+            # Get list of previous night's raw cal files
+            # (within four hours of day changeover)
+            fspec = os.path.join(srcdir, "ifu%s_2*.fits" % pdate)
+            flist = sorted(glob.glob(fspec))
+            # Loop over file list
+            for src in flist:
+                if os.stat(src).st_size >= fsize:
+                    # Read FITS header
+                    f = pf.open(src)
+                    hdr = f[0].header
+                    f.close()
+                    # Get OBJECT keyword
+                    obj = hdr['OBJECT']
+                    # Filter Calibs and avoid test images
+                    if 'Calib' in obj and 'of' in obj and 'test' not in obj:
+                        # Copy cal images
+                        imf = src.split('/')[-1]
+                        destfil = os.path.join(destdir, imf)
+                        exptime = hdr['EXPTIME']
+                        # Check for dome exposures
+                        if 'dome' in obj:
+                            if exptime > 100. and ('dome' in obj and
+                                                   'Xe' not in obj and
+                                                   'Hg' not in obj and
+                                                   'Cd' not in obj):
+                                # Copy dome images
+                                if not os.path.exists(destfil):
+                                    nc, ns = docp(src, destfil, onsky=False,
+                                                  verbose=True)
+                                    ncp += nc
+                        # Check for arcs
+                        elif 'Xe' in obj or 'Cd' in obj or 'Hg' in obj:
+                            if exptime > 25.:
+                                # Copy arc images
+                                if not os.path.exists(destfil):
+                                    nc, ns = docp(src, destfil, onsky=False,
+                                                  verbose=True)
+                                    ncp += nc
+                        # Check for biases
+                        elif 'bias' in obj:
+                            if exptime <= 0.:
+                                # Copy bias images
+                                if not os.path.exists(destfil):
+                                    nc, ns = docp(src, destfil, onsky=False,
+                                                  verbose=True)
+                                    ncp += nc
+                else:
+                    print("Truncated file: %s" % src)
+    else:
+        print("No previous directories found")
 
     return ncp
     # END: cpprecal

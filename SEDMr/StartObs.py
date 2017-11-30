@@ -404,7 +404,8 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
             if lf is not None:
                 # Do we have a newer file in the source dir?
                 if os.stat(f).st_mtime > os.stat(lf).st_mtime:
-                    do_copy = True
+                    if abs(os.stat(f).st_mtime - os.stat(lf).st_mtime) > 0.5:
+                        do_copy = True
             # No files yet in dest, so all in source are needed
             else:
                 do_copy = True

@@ -383,12 +383,6 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
 
     # Get files in destination directory
     dflist = sorted(glob.glob(os.path.join(destdir, 'ifu*.fits')))
-    # Are there any files yet?
-    if len(dflist) > 0:
-        # Get most recent local ifu image
-        lf = dflist[-1]
-    else:
-        lf = None
     # Record copies and standard star observations
     ncp = 0
     nstd = 0
@@ -397,28 +391,21 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
     srcfiles = sorted(glob.glob(os.path.join(srcdir, 'ifu*.fits')))
     # Loop over source files
     for f in srcfiles:
-        # Do we copy?
-        do_copy = False
+        # get base filename
+        fn = f.split('/')[-1]
         # Is our source file complete?
         if os.stat(f).st_size >= fsize:
-            if lf is not None:
-                # Do we have a newer file in the source dir?
-                if os.stat(f).st_mtime > os.stat(lf).st_mtime:
-                    if abs(os.stat(f).st_mtime - os.stat(lf).st_mtime) > 0.5:
-                        do_copy = True
-            # No files yet in dest, so all in source are needed
-            else:
-                do_copy = True
-        if do_copy:
-            # Get ifu image name
-            fn = f.split('/')[-1]
-            # Call copy
-            nc, ns = docp(f, destdir + '/' + fn)
-            if nc >= 1:
-                copied.append(fn)
-                # Record copies
-                ncp += nc
-                nstd += ns
+            # has it been previously copied?
+            prev = [s for s in dflist if fn in s]
+            # No? then copy
+            if len(prev) < 1:
+                # Call copy
+                nc, ns = docp(f, destdir + '/' + fn)
+                if nc >= 1:
+                    copied.append(fn)
+                    # Record copies
+                    ncp += nc
+                    nstd += ns
     # We copied files
     print("Copied %d files" % ncp)
     # Do bias subtraction, CR rejection

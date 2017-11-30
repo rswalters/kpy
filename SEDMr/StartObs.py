@@ -759,7 +759,8 @@ def obs_loop(rawlist=None, redd=None):
         sunset = p60.next_setting(sun)
         # Copy raw cal files from previous date directory
         npre = cpprecal(rawlist, outdir)
-        print("Copied %d raw cal files from %s" % (npre, rawlist[-2]))
+        if npre > 0:
+            print("Copied %d raw cal files from %s" % (npre, rawlist[-2]))
         # Now check the current source dir for raw cal files
         ncp = cpcal(srcdir, outdir)
         print("Copied %d raw cal files from %s" % (ncp, srcdir))
@@ -771,9 +772,13 @@ def obs_loop(rawlist=None, redd=None):
             now = ephem.now()
             time.sleep(60)
             if now.tuple()[3] >= 20:
-                print("checking %s for new raw cal files..." % rawlist[-2])
-                ncp = cpprecal(rawlist, outdir)
-                print("Copied %d raw cal files from %s" % (ncp, rawlist[-2]))
+                if len(rawlist) > 1:
+                    print("checking %s for new raw cal files..." % rawlist[-2])
+                    ncp = cpprecal(rawlist, outdir)
+                    print("Copied %d raw cal files from %s" %
+                          (ncp, rawlist[-2]))
+                else:
+                    print("no previous directories to check")
             else:
                 print("checking %s for new raw cal files..." % srcdir)
                 ncp = cpcal(srcdir, outdir)

@@ -434,23 +434,24 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
         retcode = os.system("ccd_to_cube.py %s --build %s"
                             % (datestr,  ",".join(copied)))
         if retcode > 0:
+            # report cube failure
             print("Error generating cube for " + ",".join(copied))
-        # now extract spectrum for std stars
-        if nstd > 0:
-            # generate spectral extraction
-            retcode = os.system("extract_star.py %s --auto %s"
-                                % (datestr, ",".join(stds)))
-            if retcode > 0:
-                print("Error extracting spectrum for " + ",".join(stds))
-        if nobj > 0:
-            retcode = os.system("extract_star.py %s --forcedpsf %s"
-                                % (datestr, ",".join(sciobj)))
-            if retcode > 0:
-                print("Error extracting spectrum for " + ",".join(sciobj))
-        # Process any standard stars
-        # if nstd > 0:
-        #    if not proc_stds(nstd):
-        #        print("Error processing standard stars")
+        else:
+            # cube succeeded, now extract spectra
+            # standard stars
+            if nstd > 0:
+                # Use auto aperture for standard stars
+                retcode = os.system("extract_star.py %s --auto %s --std"
+                                    % (datestr, ",".join(stds)))
+                if retcode > 0:
+                    print("Error extracting spectrum for " + ",".join(stds))
+            # science targets
+            if nobj > 0:
+                # Use forced psf for faint targets (eventually)
+                retcode = os.system("extract_star.py %s --auto %s"
+                                    % (datestr, ",".join(sciobj)))
+                if retcode > 0:
+                    print("Error extracting spectrum for " + ",".join(sciobj))
 
     return ncp, copied
     # END: cpsci

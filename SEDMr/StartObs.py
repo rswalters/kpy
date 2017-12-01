@@ -203,6 +203,10 @@ def docp(src, dest, onsky=True, verbose=False):
     ncp = 0
     # Was a standard star observation copied?
     nstd = 0
+    # Was a science object copied?
+    nobj = 0
+    # Was a ZTF object copied?
+    nztf = 0
     # Check if dome conditions are not right
     if onsky and 'CLOSED' in dome:
         if verbose:
@@ -217,7 +221,10 @@ def docp(src, dest, onsky=True, verbose=False):
                 nstd = 1
                 print("Standard %s copied to %s" % (obj, dest))
             else:
+                nobj = 1
                 print('Target %s copied to %s' % (obj, dest))
+                if 'ZTF' in obj:
+                    nztf = 1
             ncp = 1
         # Report skipping and type
         else:
@@ -226,7 +233,7 @@ def docp(src, dest, onsky=True, verbose=False):
             if verbose and 'Focus:' in hdr['OBJECT']:
                 print('Focus file %s not copied' % src)
 
-    return ncp, nstd
+    return ncp, nstd, nobj
     # END: docp
 
 
@@ -386,7 +393,10 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
     # Record copies and standard star observations
     ncp = 0
     nstd = 0
+    nobj = 0
     copied = []
+    stds = []
+    sciobj = []
     # Get list of source files
     srcfiles = sorted(glob.glob(os.path.join(srcdir, 'ifu*.fits')))
     # Loop over source files
@@ -398,14 +408,19 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
             # has it been previously copied?
             prev = [s for s in dflist if fn in s]
             # No? then copy
-            if len(prev) < 1:
+            if len(prev) == 0:
                 # Call copy
-                nc, ns = docp(f, destdir + '/' + fn)
+                nc, ns, nob = docp(f, destdir + '/' + fn)
                 if nc >= 1:
                     copied.append(fn)
-                    # Record copies
-                    ncp += nc
-                    nstd += ns
+                if ns >= 1:
+                    stds.append(fn)
+                if nob >= 1:
+                    sciobj.append(fn)
+                # Record copies
+                ncp += nc
+                nstd += ns
+                nobj += nob
     # We copied files
     print("Copied %d files" % ncp)
     # Do bias subtraction, CR rejection
@@ -415,12 +430,23 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
         if datestr is None:
             print("Illegal datestr parameter")
             return 0, None
-        print("ccd_to_cube.py %s --build %s"
-                            % (datestr,  ",".join(copied)))
+        # generate cube for all copied images
         retcode = os.system("ccd_to_cube.py %s --build %s"
                             % (datestr,  ",".join(copied)))
         if retcode > 0:
             print("Error generating cube for " + ",".join(copied))
+        # now extract spectrum for std stars
+        if nstd > 0:
+            # generate spectral extraction
+            retcode = os.system("extract_star.py %s --auto --build %s"
+                                % (datestr, ",".join(stds)))
+            if retcode > 0:
+                print("Error extracting spectrum for " + ",".join(stds))
+        if nobj > 0:
+            retcode = os.system("extract_star.py %s --forcedpsf --build %s"
+                                % (datestr, ",".join(sciobj)))
+            if retcode > 0:
+                print("Error extracting spectrum for " + ",".join(sciobj))
         # Process any standard stars
         # if nstd > 0:
         #    if not proc_stds(nstd):
@@ -582,24 +608,27 @@ def cpprecal(dirlist, destdir='./', fsize=8400960):
                                                    'Cd' not in obj):
                                 # Copy dome images
                                 if not os.path.exists(destfil):
-                                    nc, ns = docp(src, destfil, onsky=False,
-                                                  verbose=True)
+                                    nc, ns, nob = docp(src, destfil,
+                                                       onsky=False,
+                                                       verbose=True)
                                     ncp += nc
                         # Check for arcs
                         elif 'Xe' in obj or 'Cd' in obj or 'Hg' in obj:
                             if exptime > 25.:
                                 # Copy arc images
                                 if not os.path.exists(destfil):
-                                    nc, ns = docp(src, destfil, onsky=False,
-                                                  verbose=True)
+                                    nc, ns, nob = docp(src, destfil,
+                                                       onsky=False,
+                                                       verbose=True)
                                     ncp += nc
                         # Check for biases
                         elif 'bias' in obj:
                             if exptime <= 0.:
                                 # Copy bias images
                                 if not os.path.exists(destfil):
-                                    nc, ns = docp(src, destfil, onsky=False,
-                                                  verbose=True)
+                                    nc, ns, nob = docp(src, destfil,
+                                                       onsky=False,
+                                                       verbose=True)
                                     ncp += nc
                 else:
                     print("Truncated file: %s" % src)
@@ -670,22 +699,22 @@ def cpcal(srcdir, destdir='./', fsize=8400960):
                                            'Hg' not in obj and 
                                            'Cd' not in obj):
                         # Copy dome images
-                        nc, ns = docp(src, destfil, onsky=False,
-                                      verbose=True)
+                        nc, ns, nob = docp(src, destfil, onsky=False,
+                                           verbose=True)
                         ncp += nc
                 # Check for arcs
                 elif 'Xe' in obj or 'Cd' in obj or 'Hg' in obj:
                     if exptime > 25.:
                         # Copy arc images
-                        nc, ns = docp(src, destfil, onsky=False,
-                                      verbose=True)
+                        nc, ns, nob = docp(src, destfil, onsky=False,
+                                           verbose=True)
                         ncp += nc
                 # Check for biases
                 elif 'bias' in obj:
                     if exptime <= 0.:
                         # Copy bias images
-                        nc, ns = docp(src, destfil, onsky=False,
-                                      verbose=True)
+                        nc, ns, nob = docp(src, destfil, onsky=False,
+                                           verbose=True)
                         ncp += nc
 
     return ncp

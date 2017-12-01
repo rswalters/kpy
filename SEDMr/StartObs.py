@@ -438,12 +438,12 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
         # now extract spectrum for std stars
         if nstd > 0:
             # generate spectral extraction
-            retcode = os.system("extract_star.py %s --auto --build %s"
+            retcode = os.system("extract_star.py %s --auto %s"
                                 % (datestr, ",".join(stds)))
             if retcode > 0:
                 print("Error extracting spectrum for " + ",".join(stds))
         if nobj > 0:
-            retcode = os.system("extract_star.py %s --forcedpsf --build %s"
+            retcode = os.system("extract_star.py %s --forcedpsf %s"
                                 % (datestr, ",".join(sciobj)))
             if retcode > 0:
                 print("Error extracting spectrum for " + ",".join(sciobj))

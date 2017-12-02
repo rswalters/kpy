@@ -431,8 +431,10 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
             print("Illegal datestr parameter")
             return 0, None
         # generate cube for all copied images
-        retcode = os.system("ccd_to_cube.py %s --build %s"
-                            % (datestr,  ",".join(copied)))
+        print("Building cube for " + ",".join(copied))
+        cmd = "ccd_to_cube.py %s --build %s" % (datestr, ",".join(copied))
+        print(cmd)
+        retcode = os.system(cmd)
         if retcode > 0:
             # report cube failure
             print("Error generating cube for " + ",".join(copied))
@@ -441,16 +443,21 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
             # standard stars
             if nstd > 0:
                 # Use auto aperture for standard stars
-                retcode = os.system("extract_star.py %s --auto %s --std "
-                                    "--radius 2.0 --runit fwhm"
-                                    % (datestr, ",".join(stds)))
+                print("Extracting spectra for " + ",".join(stds))
+                cmd = "extract_star.py %s --auto %s --std --radius 2.0 --runit fwhm" \
+                      % (datestr, ",".join(stds))
+                print(cmd)
+                retcode = os.system(cmd)
                 if retcode > 0:
                     print("Error extracting spectrum for " + ",".join(stds))
             # science targets
             if nobj > 0:
                 # Use forced psf for faint targets (eventually)
-                retcode = os.system("extract_star.py %s --auto %s"
-                                    % (datestr, ",".join(sciobj)))
+                print("Extracting spectra for " + ",".join(sciobj))
+                cmd = "extract_star.py %s --auto %s" % (datestr,
+                                                        ",".join(sciobj))
+                print(cmd)
+                retcode = os.system(cmd)
                 if retcode > 0:
                     print("Error extracting spectrum for " + ",".join(sciobj))
 

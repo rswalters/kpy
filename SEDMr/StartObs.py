@@ -441,7 +441,8 @@ def cpsci(srcdir, destdir='./', fsize=8400960, oldcals=False, datestr=None):
             # standard stars
             if nstd > 0:
                 # Use auto aperture for standard stars
-                retcode = os.system("extract_star.py %s --auto %s --std"
+                retcode = os.system("extract_star.py %s --auto %s --std "
+                                    "--radius 2.0 --runit fwhm"
                                     % (datestr, ",".join(stds)))
                 if retcode > 0:
                     print("Error extracting spectrum for " + ",".join(stds))
